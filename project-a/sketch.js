@@ -4,6 +4,10 @@ let creatureY = 0;
 let creatureXSpeed = 3;
 let creatureYSpeed = 4;
 
+let velX = 3;
+let velY = 0;
+let accY = 0.02;
+
 let blinkingTime = 0;
 let blinking = false;
 
@@ -15,9 +19,15 @@ let y1 = 400;
 let y1Speed = -8;
 let t = 0;
 
+// stars
+let starX = 0;
+let starY = 0;
+let starTimer = 0;
+
 function setup() {
-  let canvas=createCanvas(800, 500);
-  canvas.parent("p5-canvas-container")
+  let canvas = createCanvas(800, 500);
+canvas.parent("p5-canvas-container");
+
   creatureX = width / 2;
 }
 
@@ -31,7 +41,7 @@ function draw() {
   line(30, 0, 30, height);
   line(770, 0, 770, height);
 
-  // background ball 1
+  // background ball
   y = sin(frameCount * 0.25) * 50;
   fill(202, 237, 26);
   strokeWeight(1);
@@ -50,9 +60,19 @@ function draw() {
   rect(10, 110, 20, 130);
   rect(770, 110, 20, 130);
 
-  // tennis racket
+  // distance
+  let distance = dist(creatureX, creatureY, mouseX, mouseY);
+
+  // racket rotation
+  let racketAngle = 0;
+  if (distance > 150) {
+    racketAngle = -PI / 2;
+  }
+
+  // racket
   push();
   translate(mouseX, mouseY);
+  rotate(racketAngle);
 
   stroke(0);
   fill(255);
@@ -65,6 +85,7 @@ function draw() {
 
   arc(-130, 35, 80, 50, PI + HALF_PI, -0.3);
   arc(-130, -30, 80, 50, 0.3, HALF_PI);
+
 
   rect(-160, 0, 30, 10);
 
@@ -85,7 +106,7 @@ function draw() {
 
   pop();
 
-  // background ball 2
+  // second background ball
   y1Speed += 0.4;
   x1 += map(noise(t), 0, 1, 1, 4);
   y1 += y1Speed;
@@ -100,42 +121,53 @@ function draw() {
   fill(202, 237, 26);
   circle(x1, y1, 25);
 
-  // movements
-  creatureX += creatureXSpeed;
-  creatureY += creatureYSpeed;
+  // physics
+  velY += accY;
+  creatureX += velX;
+  creatureY += velY;
 
-  // from x
   if (creatureX <= 30 || creatureX >= 770) {
-    creatureXSpeed *= -1;
+    velX *= -1;
   }
 
-  // from top
   if (creatureY <= 0) {
-    creatureYSpeed = abs(creatureYSpeed);
+    velY = abs(velY);
   }
 
-  // distance from the center of the racket
-  let distance = dist(creatureX, creatureY, mouseX, mouseY);
-
+  // hit racket
   if (distance <= 70) {
-    // jump up
-    creatureYSpeed = -abs(creatureYSpeed);
 
-    // changing of x from the hit
+    velY = -abs(velY);
+
     let offset = creatureX - mouseX;
-    creatureXSpeed = offset * 0.15;
+    velX = offset * 0.15;
+
+    starX = creatureX;
+    starY = creatureY;
+    starTimer = 20;
   }
 
-  // restart
   if (creatureY > height) {
     creatureY = 0;
     creatureX = random(100, 700);
   }
 
   drawCreature(creatureX, creatureY);
-}
 
-// CREATURE
+  // draw stars
+  if (starTimer > 0) {
+
+    fill(255,255,0);
+    noStroke();
+
+    circle(starX + 15, starY, 6);
+    circle(starX - 15, starY, 6);
+    circle(starX, starY - 15, 6);
+    circle(starX, starY + 15, 6);
+
+    starTimer--;
+  }
+}
 
 function drawCreature(x, y) {
   push();
@@ -189,10 +221,18 @@ function drawEyes() {
 }
 
 function drawMouth() {
+
+  let distance = dist(creatureX, creatureY, mouseX, mouseY);
+
   stroke(0);
   strokeWeight(4);
   noFill();
-  arc(0, 5, 15, 10, 0.2 * PI, PI);
+
+  if (distance > 150) {
+    arc(0, 15, 15, 10, PI, TWO_PI);
+  } else {
+    arc(0, 5, 15, 10, 0.2 * PI, PI);
+  }
 }
 
 function drawArm(x, y, side) {
