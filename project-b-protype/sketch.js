@@ -182,7 +182,7 @@ if (blinking) {
   ellipse(6, eyeY, 5);
 }
 
-// ротик
+
 noFill();
 stroke(0);
 arc(0, eyeY + 15, 12, 8, 0, PI);
