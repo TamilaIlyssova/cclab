@@ -1,191 +1,228 @@
-let engine
-let leaves = []
-let angle=0
-let offsetY = 0;
-let blinking = false;
+let waterClicks = 0;
+let sunClicks = 0;
+let groundClicks = 0;
+let weather = "sunny"; // "sunny", "rainy", "night"
+let weatherTimer = 0;
+
+let bounceY = 0;
 
 function setup() {
   createCanvas(600, 600);
-  engine = new DecisionEngine();
 }
 
 function draw() {
-  background(240);
-
-  drawInterface();
-
-  engine.update();
-  let state = engine.getState()
-
-  drawTree(state);
-  angle = sin(frameCount * 0.04) * 0.08;
-  offsetY = sin(frameCount * 0.08) * 5;
-  // blinking
-if (frameCount % 120 == 0) {
-  blinking = true;
-}
-
-if (frameCount % 120 == 10) {
-  blinking = false;
-}
-}
-
-
-// interaction
-
-function mousePressed() {
-  if (mouseY < 100) {
-    if (mouseX < width / 3) {
-      engine.addChoice("soft");
-    } else if (mouseX < 2 * width / 3) {
-      engine.addChoice("tall");
-    } else {
-      engine.addChoice("wide");
-    }
-  }
-}
-
-
-// interface
-
-function drawInterface() {
-  fill(200);
-  rect(0, 0, width / 3, 100);
-  rect(width / 3, 0, width / 3, 100);
-  rect(2 * width / 3, 0, width / 3, 100);
-
-  fill(0);
-  textAlign(CENTER, CENTER);
-  text("💧 Soft", width / 6, 50);
-  text("☀️ Tall", width / 2, 50);
-  text("🌱 Wide", 5 * width / 6, 50);
-}
-
-
-// main class
-
-class DecisionEngine {
-  constructor() {
-    this.choices = [];
-    this.maxHistory = 10;
-
-    this.softScore = 0;
-    this.tallScore = 0;
-    this.wideScore = 0;
-
-    this.needsNewLeaves = true;
+  // weather change 
+  weatherTimer++;
+  if (weatherTimer > 360) { // every 6 seconds (at 60 fps)
+    let rand = floor(random(3));
+    if (rand === 0) weather = "sunny";
+    else if (rand === 1) weather = "rainy";
+    else weather = "night";
+    weatherTimer = 0;
   }
 
-  addChoice(type) {
-    this.choices.push(type);
+  // background
+  if (weather === "sunny") background(185, 215, 235); 
+  else if (weather === "rainy") background(100, 140, 180); 
+  else background(30, 40, 70); 
 
-    if (this.choices.length > this.maxHistory) {
-      this.choices.shift();
-    }
+  // light breathing/bouncing animation
+  bounceY = sin(frameCount * 0.05) * 3;
 
-    this.recalculate();
-    this.needsNewLeaves = true;
-  }
-
-  recalculate() {
-    this.softScore = 0;
-    this.tallScore = 0;
-    this.wideScore = 0;
-
-    for (let i = 0; i < this.choices.length; i++) {
-      let weight = i + 1;
-
-      if (this.choices[i] === "soft") {
-        this.softScore += weight;
-      } else if (this.choices[i] === "tall") {
-        this.tallScore += weight;
-      } else if (this.choices[i] === "wide") {
-        this.wideScore += weight;
-      }
-    }
-  }
-
-  update() {
-    //prototype
-  }
-
-  getState() {
-    let total = this.softScore + this.tallScore + this.wideScore;
-
-    if (total == 0) {
-      return {
-        height: 100,
-        width: 80,
-        fluff: 1
-      };
-    }
-
-    return {
-      height: map(this.tallScore, 0, total, 100, 250),
-      width: map(this.wideScore, 0, total, 80, 200),
-      fluff: map(this.softScore, 0, total, 1, 3)
-    };
-  }
-}
-
-// tree
-
-function drawTree(state) {
-  push();
-  translate(width / 2, height - 100+ offsetY);
-  rotate(angle);
-
-// trunk
-  fill(120, 80, 50);
-  rect(0, -state.height / 2, 14, state.height);
-
-  // leaves
-  if (leaves.length == 0 || engine.needsNewLeaves) {
-    leaves = [];
-
-    for (let i = 0; i < 60; i++) {
-      leaves.push({
-        x: random(-state.width / 3, state.width / 3),
-        y: random(-state.height, -state.height / 2),
-        size: random(40, 40)
-      });
-    }
-
-    engine.needsNewLeaves = false;
-  }
-
-
-  noStroke()
-  fill(50, 180, 80);
-  for (let i = 0; i < leaves.length; i++) {
-    ellipse(leaves[i].x, leaves[i].y, leaves[i].size);
-  }
-
-
-  // face
-
-let eyeY = -state.height / 2-20
-
-fill(255);
-
-if (blinking) {
-  stroke(0);
-  line(-10, eyeY, -2, eyeY);
-  line(2, eyeY, 10, eyeY);
-} else {
+  //  ground
+  fill(143, 93, 72);
   noStroke();
-  ellipse(-6, eyeY, 12);
-  ellipse(6, eyeY, 12);
+  ellipse(300, 650, 800, 400);
 
-  fill(0);
-  ellipse(-6, eyeY, 5);
-  ellipse(6, eyeY, 5);
+  // sun
+  if (weather !== "night") {
+    fill(255, 184, 28); 
+    ellipse(120, 120 + bounceY, 120, 120);
+    drawCuteFace(120, 120 + bounceY);
+  } else {
+    fill(200, 200, 220); 
+    ellipse(120, 120 + bounceY, 100, 100);
+    drawCuteFace(120, 120 + bounceY, true); 
+  }
+
+  // cloud
+  push();
+  translate(480, 120 + bounceY * -1); // Moves in opposite phase
+  fill(255);
+  if (weather === "rainy") fill(180, 200, 220);
+  noStroke();
+  ellipse(0, 0, 120, 80);
+  ellipse(-40, 10, 80, 60);
+  ellipse(40, 10, 80, 60);
+  ellipse(0, -30, 90, 70);
+  
+  if (weather === "rainy") {
+    // Raindrops
+    stroke(50, 150, 255);
+    strokeWeight(3);
+    for(let i = 0; i < 5; i++) {
+      let rx = random(-50, 50);
+      let ry = random(40, 100) + (frameCount % 20) * 5;
+      line(rx, ry, rx, ry + 10);
+    }
+    noStroke();
+  }
+  drawCuteFace(0, 0);
+  pop();
+
+  // tree
+  // Tree state 
+  let treeColor = color(104, 217, 48); // Normal green
+  let isSick = false;
+
+  if (waterClicks >= 5) {
+    treeColor = color(220, 220, 80); // Yellow (overwatered)
+    isSick = true;
+  }
+  if (sunClicks >= 5) {
+    treeColor = color(160, 110, 50); // Brown (burned)
+    isSick = true;
+  }
+
+  // Trunk
+  fill(112, 56, 22);
+  rect(285, 350, 30, 120);
+
+  // Crown 
+  let growthBase = min(groundClicks * 15, 60); // Grows up to a certain limit
+  let crownSize = 130 + growthBase;
+
+  push();
+  translate(300, 330 + bounceY);
+  fill(treeColor);
+  
+  ellipse(0, 0, crownSize, crownSize - 20);
+  ellipse(-crownSize*0.35, 15, crownSize*0.6, crownSize*0.6);
+  ellipse(crownSize*0.35, 15, crownSize*0.6, crownSize*0.6);
+  ellipse(0, -crownSize*0.3, crownSize*0.7, crownSize*0.7);
+
+  // Tree face
+  drawCuteFace(0, 0, isSick);
+
+  // If fertilized a lot (ground > 4) and tree is not sick 
+  if (groundClicks >= 4 && !isSick) {
+    fill(230, 40, 40); // Red apples
+    ellipse(-30, -20, 20);
+    ellipse(40, -10, 20);
+    ellipse(10, -50, 20);
+    ellipse(-45, 20, 20);
+    ellipse(35, 30, 20);
+  }
+  pop();
+
+  // hints and instructions
+  fill(255);
+  textSize(20);
+  textAlign(CENTER);
+  textStyle(BOLD);
+  
+  // Black outline for text 
+  stroke(0);
+  strokeWeight(3);
+  
+  if (waterClicks >= 5) {
+    text("Too wet! 🌧️ Click the Sun to dry!", 300, 40);
+  } else if (sunClicks >= 5) {
+    text("Tree is drying! ☀️ Click the Cloud to water it!", 300, 40);
+  } else if (weather === "sunny") {
+    text("It's hot! Click the Cloud (💧 Soft) to water the tree.", 300, 40);
+  } else if (weather === "rainy") {
+    text("It's raining! Click the Sun (☀️ Tall) to give some light.", 300, 40);
+  } else if (weather === "night") {
+    text("Nighttime. Click the Ground (🌱 Wide) to fertilize the soil.", 300, 40);
+  }
+  noStroke();
 }
 
+// Helper function to draw cute faces
+function drawCuteFace(x, y, isSleepyOrSick = false) {
+  fill(0);
+  
+  if (isSleepyOrSick) {
+    // Closed or sad eyes
+    stroke(0);
+    strokeWeight(4);
+    line(x - 20, y - 5, x - 8, y - 5);
+    line(x + 8, y - 5, x + 20, y - 5);
+    noStroke();
+    
+    // Sad/Neutral mouth
+    noFill();
+    stroke(0);
+    strokeWeight(3);
+    arc(x, y + 10, 10, 5, PI, 0);
+    noStroke();
+  } else {
+    // Normal cute eyes
+    ellipse(x - 15, y - 5, 16, 20);
+    ellipse(x + 15, y - 5, 16, 20);
+    
+    // Eye highlights
+    fill(255);
+    ellipse(x - 18, y - 9, 6, 8);
+    ellipse(x + 12, y - 9, 6, 8);
+    ellipse(x - 13, y - 2, 3, 3);
+    ellipse(x + 17, y - 2, 3, 3);
+    
+    // Smile
+    noFill();
+    stroke(0);
+    strokeWeight(3);
+    arc(x, y + 10, 12, 12, 0, PI);
+    noStroke();
+  }
+}
 
-noFill();
-stroke(0);
-arc(0, eyeY + 15, 12, 8, 0, PI);
- 
-  pop();
+// click interactions
+function mousePressed() {
+  // Calculate distance from mouse to objects
+  let dSun = dist(mouseX, mouseY, 120, 120);
+  let dCloud = dist(mouseX, mouseY, 480, 120);
+
+  // Sun click (Tall)
+  if (dSun < 60) {
+    sunClicks++;
+    if (waterClicks > 0) 
+      waterClicks--; // Sun evaporates excess water
+  }
+  // Cloud click (Soft)
+  else if (dCloud < 60) {
+    waterClicks++;
+    if (sunClicks > 0) 
+      sunClicks--; // Water cools down from overheating
+  }
+  // Ground click (Wide)
+  else if (mouseY > 450) {
+    groundClicks++;
+  }
+  
+  // Constraints so counters don't go to infinity
+  //cloud
+  if (waterClicks > 8) {
+    waterClicks = 8;
+  }
+  if (waterClicks < 0) {
+    waterClicks = 0;
+  }
+
+  // sun
+  if (sunClicks > 8) {
+    sunClicks = 8;
+  }
+  if (sunClicks < 0) {
+    sunClicks = 0;
+  }
+
+  // ground
+  if (groundClicks > 10) {
+    groundClicks = 10;
+  }
+  if (groundClicks < 0) {
+    groundClicks = 0;
+  }
 }
